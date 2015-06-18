@@ -1102,6 +1102,11 @@ static const int64 nTargetTimespan = 60 * 60; //60 minutes
 static const int64 nTargetSpacing = 20; // 20 seconds
 static const int64 nInterval = 40; //40 blocks
 
+static const int64 Fork1Height = 4000; //block 4000
+static const int64 nTargetTimespanV2 = 20 * 60; //20 minutes
+static const int64 nTargetSpacingV2 = 20; // 20 seconds
+static const int64 nIntervalV2 = nTargetTimespanV2 / nTargetSpacingV2; //60 blocks
+
 int64 static GetBlockValue(int nHeight, int64 nFees, unsigned int nBits)
 {
     if (nHeight == 0)
@@ -1203,6 +1208,71 @@ unsigned int ComputeMinWork(unsigned int nBase, int64 nTime)
     if (bnResult > bnProofOfWorkLimit)
         bnResult = bnProofOfWorkLimit;
     return bnResult.GetCompact();
+}
+
+unsigned int static GetNextWorkRequired_V2(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
+{
+    unsigned int nProofOfWorkLimit = bnProofOfWorkLimit.GetCompact();
+
+    // Genesis block
+    if (pindexLast == NULL)
+        return nProofOfWorkLimit;
+
+    // Only change once per interval
+    if ((pindexLast->nHeight+1) % nIntervalV2 != 0)
+    {
+        // Special difficulty rule for testnet:
+        if (fTestNet)
+        {
+            // If the new block's timestamp is more than 2 * nTargetSpacingV2
+            // then allow mining of a min-difficulty block.
+            if (pblock->nTime > pindexLast->nTime + nTargetSpacingV2*2)
+                return nProofOfWorkLimit;
+            else
+            {
+                // Return the last non-special-min-difficulty-rules-block
+                const CBlockIndex* pindex = pindexLast;
+                while (pindex->pprev && pindex->nHeight % nIntervalV2 != 0 && pindex->nBits == nProofOfWorkLimit)
+                    pindex = pindex->pprev;
+                return pindex->nBits;
+            }
+        }
+
+        return pindexLast->nBits;
+    }
+
+    // Go back by what we want to be nIntervalV2 blocks 
+    const CBlockIndex* pindexFirst = pindexLast;
+    for (int i = 0; pindexFirst && i < nIntervalV2-1; i++)
+        pindexFirst = pindexFirst->pprev;
+    assert(pindexFirst);
+
+    // Limit adjustment step
+    int64 nActualTimespan = pindexLast->GetBlockTime() - pindexFirst->GetBlockTime();
+    printf("  nActualTimespan = %"PRI64d"  before bounds\n", nActualTimespan);
+    int64 LimUp = nTargetTimespanV2 * 100 / 150;
+    int64 LimDown = nTargetTimespanV2 * 2; // 200% down
+    if (nActualTimespan < LimUp)
+        nActualTimespan = LimUp;
+    if (nActualTimespan > LimDown)
+        nActualTimespan = LimDown;
+
+    // Retarget
+    CBigNum bnNew;
+    bnNew.SetCompact(pindexLast->nBits);
+    bnNew *= nActualTimespan;
+    bnNew /= nTargetTimespanV2;
+
+    if (bnNew > bnProofOfWorkLimit)
+        bnNew = bnProofOfWorkLimit;
+
+    /// debug print
+    printf("GetNextWorkRequired RETARGET\n");
+    printf("nTargetTimespanV2 = %"PRI64d"    nActualTimespan = %"PRI64d"\n", nTargetTimespanV2, nActualTimespan);
+    printf("Before: %08x  %s\n", pindexLast->nBits, CBigNum().SetCompact(pindexLast->nBits).getuint256().ToString().c_str());
+    printf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.getuint256().ToString().c_str());
+
+    return bnNew.GetCompact();
 }
 
 unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
@@ -2268,8 +2338,11 @@ bool CBlock::AcceptBlock(CValidationState &state, CDiskBlockPos *dbp)
         nHeight = pindexPrev->nHeight+1;
 
         // Check proof of work
-        if (nBits != GetNextWorkRequired(pindexPrev, this))
-            return state.DoS(100, error("AcceptBlock() : incorrect proof of work"));
+        if (nHeight >= Fork1Height && nBits != GetNextWorkRequired_V2(pindexPrev, this)) 
+              return state.DoS(100, error("AcceptBlock() : incorrect proof of work"));
+        if (nHeight < Fork1Height && nBits != GetNextWorkRequired(pindexPrev, this))
+              return state.DoS(100, error("AcceptBlock() : incorrect proof of work"));
+        
 
         // Check timestamp against prev
         if (GetBlockTime() <= pindexPrev->GetMedianTimePast())
@@ -4570,7 +4643,11 @@ CBlockTemplate* CreateNewBlock(CReserveKey& reservekey)
         // Fill in header
         pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
         pblock->UpdateTime(pindexPrev);
-        pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock);
+        if (pindexPrev->nHeight > Fork1Height) {
+          pblock->nBits          = GetNextWorkRequired_V2(pindexPrev, pblock);
+        } else {
+          pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock);
+        }
         pblock->nNonce         = 0;
 
         // Calculate nVvalue dependet nBits
