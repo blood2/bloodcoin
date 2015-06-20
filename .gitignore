@@ -42,7 +42,6 @@ Network Trash Folder
 Temporary Items
 .apdisk
 build
-Makefile
 bloodcoin-qt
 src/qt/locale/*.qm
 qrc_bitcoin.cpp
