@@ -1,5 +1,3 @@
-// Copyright (c) 2009-2012 The Bitcoin developers
-// Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <boost/assign/list_of.hpp> // for 'map_list_of()'
@@ -40,11 +38,12 @@ namespace Checkpoints
         boost::assign::map_list_of
         (      0,     uint256("0x0000031d234b64f9a2c8fc5c5ff49e3bcb6f809e558bddf1a3fb8f4fd48b953e"))
         (      12,    uint256("0x0000039c29d4ee1adb37ccfbc311b00da7a493332d49858a575e3852b7428776"))
+        (      3842,    uint256("0x000000000371735f0ef13ab07926e7a46c662c65377054f16e8cecacd4f61081"))
         ;
     static const CCheckpointData data = {
         &mapCheckpoints,
-        1434482960, // * UNIX timestamp of last checkpoint block
-        13,    // * total number of transactions between genesis and last checkpoint
+        1434757665, // * UNIX timestamp of last checkpoint block
+        9794,    // * total number of transactions between genesis and last checkpoint
                     //   (the tx=... number in the SetBestChain debug.log lines)
         2880.0      // * estimated number of transactions per day after checkpoint
     };
