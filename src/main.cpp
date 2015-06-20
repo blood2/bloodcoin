@@ -1210,17 +1210,6 @@ unsigned int ComputeMinWork(unsigned int nBase, int64 nTime)
     return bnResult.GetCompact();
 }
 
-unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
-{
-  if(pindexLast+1 >= Fork1Height) 
-  {
-    GetNextWorkRequired_V2(pindexLast, pblock);  
-  } else 
-  {
-    GetNextWorkRequired_V1(pindexLast, pblock);  
-  } 
-
-}
 
 unsigned int static GetNextWorkRequired_V2(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
 {
@@ -1279,7 +1268,7 @@ unsigned int static GetNextWorkRequired_V2(const CBlockIndex* pindexLast, const 
         bnNew = bnProofOfWorkLimit;
 
     /// debug print
-    printf("GetNextWorkRequired RETARGET\n");
+    printf("GetNextWorkRequired RETARGET2\n");
     printf("nTargetTimespanV2 = %"PRI64d"    nActualTimespan = %"PRI64d"\n", nTargetTimespanV2, nActualTimespan);
     printf("Before: %08x  %s\n", pindexLast->nBits, CBigNum().SetCompact(pindexLast->nBits).getuint256().ToString().c_str());
     printf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.getuint256().ToString().c_str());
@@ -1350,6 +1339,18 @@ unsigned int static GetNextWorkRequired_V1(const CBlockIndex* pindexLast, const 
     printf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.getuint256().ToString().c_str());
 
     return bnNew.GetCompact();
+}
+
+unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
+{
+  if(pindexLast+1 >= Fork1Height) 
+  {
+    GetNextWorkRequired_V2(pindexLast, pblock);  
+  } else 
+  {
+    GetNextWorkRequired_V1(pindexLast, pblock);  
+  } 
+
 }
 
 bool CheckProofOfWork(uint256 hash, unsigned int nBits)
