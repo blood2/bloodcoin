@@ -1210,6 +1210,18 @@ unsigned int ComputeMinWork(unsigned int nBase, int64 nTime)
     return bnResult.GetCompact();
 }
 
+unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
+{
+  if(pindexLast+1 >= Fork1Height) 
+  {
+    GetNextWorkRequired_V2(pindexLast, pblock);  
+  } else 
+  {
+    GetNextWorkRequired_V1(pindexLast, pblock);  
+  } 
+
+}
+
 unsigned int static GetNextWorkRequired_V2(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
 {
     unsigned int nProofOfWorkLimit = bnProofOfWorkLimit.GetCompact();
@@ -1275,7 +1287,7 @@ unsigned int static GetNextWorkRequired_V2(const CBlockIndex* pindexLast, const 
     return bnNew.GetCompact();
 }
 
-unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
+unsigned int static GetNextWorkRequired_V1(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
 {
     unsigned int nProofOfWorkLimit = bnProofOfWorkLimit.GetCompact();
 
@@ -2338,9 +2350,7 @@ bool CBlock::AcceptBlock(CValidationState &state, CDiskBlockPos *dbp)
         nHeight = pindexPrev->nHeight+1;
 
         // Check proof of work
-        if (nHeight >= Fork1Height && nBits != GetNextWorkRequired_V2(pindexPrev, this)) 
-              return state.DoS(100, error("AcceptBlock() : incorrect proof of work"));
-        if (nHeight < Fork1Height && nBits != GetNextWorkRequired(pindexPrev, this))
+        if (nBits != GetNextWorkRequired(pindexPrev, this)) 
               return state.DoS(100, error("AcceptBlock() : incorrect proof of work"));
         
 
@@ -4643,11 +4653,7 @@ CBlockTemplate* CreateNewBlock(CReserveKey& reservekey)
         // Fill in header
         pblock->hashPrevBlock  = pindexPrev->GetBlockHash();
         pblock->UpdateTime(pindexPrev);
-        if (pindexPrev->nHeight > Fork1Height) {
-          pblock->nBits          = GetNextWorkRequired_V2(pindexPrev, pblock);
-        } else {
-          pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock);
-        }
+        pblock->nBits          = GetNextWorkRequired(pindexPrev, pblock);
         pblock->nNonce         = 0;
 
         // Calculate nVvalue dependet nBits
