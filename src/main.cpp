@@ -1345,10 +1345,10 @@ unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBl
 {
   if(pindexLast->nHeight > Fork1Height) 
   {
-    GetNextWorkRequired_V2(pindexLast, pblock);  
+    return GetNextWorkRequired_V2(pindexLast, pblock);  
   } else 
   {
-    GetNextWorkRequired_V1(pindexLast, pblock);  
+    return GetNextWorkRequired_V1(pindexLast, pblock);  
   } 
 
 }
