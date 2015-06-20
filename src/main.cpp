@@ -1343,7 +1343,7 @@ unsigned int static GetNextWorkRequired_V1(const CBlockIndex* pindexLast, const 
 
 unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
 {
-  if(pindexLast->nHeight+1 >= Fork1Height) 
+  if(pindexLast->nHeight > Fork1Height) 
   {
     GetNextWorkRequired_V2(pindexLast, pblock);  
   } else 
